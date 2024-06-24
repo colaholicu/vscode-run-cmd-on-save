@@ -5,9 +5,16 @@ import * as child_process from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
+let animatedstatusBarItem : vscode.StatusBarItem;
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {	
+export function activate(context: vscode.ExtensionContext) {
+	animatedstatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
+	animatedstatusBarItem.text = "$(loading~spin)";
+	animatedstatusBarItem.hide();
+	context.subscriptions.push(animatedstatusBarItem);
+
 	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((document) => {
 		 // Verify that the document is a .scss or .ts file
 		 if (document.languageId === 'scss' || document.languageId === 'typescript') {
@@ -58,19 +65,18 @@ function findDirectoryWithFile(filePath: string, fileName: string): Promise<stri
 	});
   }
   
-  function runCommand(directory: string) {
-		// Replace 'yourCommand' with the command you want to run
+function runCommand(directory: string) {
 		const command = vscode.workspace.getConfiguration('run-cmd-on-save').command;
 	
-		child_process.exec(command, { cwd: directory }, (error, stdout, stderr) => {
+		animatedstatusBarItem?.show();
+		child_process.exec(command, { cwd: directory, maxBuffer: Number.MAX_VALUE }, (error, stdout, stderr) => {
+			animatedstatusBarItem?.hide();
 			if (error) {
-				console.error(`Execution error: ${error}`);
 				return vscode.window.showErrorMessage(`Error executing command ${command}: ${error.message}`);
 			}
 			if (stderr) {
-				console.error(`Error output: ${stderr}`);
 				return vscode.window.showErrorMessage(`Command ${command} error output: ${stderr}`);
 			}
-			console.log(`Standard output: ${stdout} in ${directory}`);
+			vscode.window.showInformationMessage("Saving Succeeded.")
 		});
-	}
+}
