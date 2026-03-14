@@ -3,7 +3,7 @@
   "displayName": "Run on Save",
   "description": "Runs a command when a .ts or .scss file is saved.",
   "publisher": "colaholicu",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.89.0"
   },
