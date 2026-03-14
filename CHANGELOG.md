@@ -1,9 +1,14 @@
 # Change Log
 
-All notable changes to the "run-cmd-on-save" extension will be documented in this file.
+### 0.0.1
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+Added support for running a command inside the found folder
 
-## [Unreleased]
+### 0.1.0
 
-- Initial release
+Added better verbose logging
+Added command timeout support
+
+### 0.1.1
+
+Updated Changelog
