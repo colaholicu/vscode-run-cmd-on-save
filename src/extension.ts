@@ -6,21 +6,26 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 let animatedstatusBarItem : vscode.StatusBarItem;
+let outputChannel : vscode.OutputChannel;
+
+const extensionName = 'run-cmd-on-save';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	animatedstatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
-	animatedstatusBarItem.text = "$(loading~spin)";
+	animatedstatusBarItem.text = "Saving file... $(loading~spin)";
 	animatedstatusBarItem.hide();
 	context.subscriptions.push(animatedstatusBarItem);
+
+	outputChannel = vscode.window.createOutputChannel("Run Command on Save");
 
 	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((document) => {
 		 // Verify that the document is a .scss or .ts file
 		 if (document.languageId === 'scss' || document.languageId === 'typescript') {
 			const currentFilePath = document.uri.fsPath;
 
-			const requiredCommonFile = vscode.workspace.getConfiguration('run-cmd-on-save').requiredCommonFile;
+			const requiredCommonFile = vscode.workspace.getConfiguration(extensionName).requiredCommonFile;
 			
 			// Find the directory to run the command in
 			findDirectoryWithFile(currentFilePath, requiredCommonFile).then(directoryToRunCommandIn => {
@@ -31,9 +36,9 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.window.showErrorMessage(`Unable to find ${requiredCommonFile} in the ${document.fileName}'s directory tree.`);
 				}
 			}).catch(error => {
-			  	vscode.window.showErrorMessage(`An error occurred: ${error.message}`);
+					vscode.window.showErrorMessage(`An error occurred: ${error.message}`);
 			});
-		  }
+			}
 	}));
 }
 
@@ -42,41 +47,61 @@ export function deactivate() {}
 
 function findDirectoryWithFile(filePath: string, fileName: string): Promise<string | undefined> {
 	const dirname = path.extname(filePath).length === 0 ? filePath : path.dirname(filePath);
-  
-	return new Promise((resolve, reject) => {
-	  // Recursively look for the file in the parent directories
-	  fs.readdir(dirname, (err, files) => {
-		if (err) {return reject(err);}
-  
-		if (files.includes(fileName)) {
-		  // Found the file, resolve with the current directory
-		  resolve(dirname);
-		} else {
-		  const parentDir = path.resolve(dirname, '..');
-		  // Check if we have reached the workspace root
-		  if (parentDir === dirname) {
-			resolve(undefined); // File not found in any parent directory
-		  } else {
-			// Continue search in the parent directory
-			resolve(findDirectoryWithFile(parentDir, fileName));
-		  }
-		}
-	  });
-	});
-  }
-  
-function runCommand(directory: string) {
-		const command = vscode.workspace.getConfiguration('run-cmd-on-save').command;
 	
-		animatedstatusBarItem?.show();
-		child_process.exec(command, { cwd: directory, maxBuffer: Number.MAX_VALUE }, (error, stdout, stderr) => {
-			animatedstatusBarItem?.hide();
-			if (error) {
-				return vscode.window.showErrorMessage(`Error executing command ${command}: ${error.message}`);
+	return new Promise((resolve, reject) => {
+		// Recursively look for the file in the parent directories
+		fs.readdir(dirname, (err, files) => {
+		if (err) {return reject(err);}
+	
+		if (files.includes(fileName)) {
+			// Found the file, resolve with the current directory
+			resolve(dirname);
+		} else {
+			const parentDir = path.resolve(dirname, '..');
+			// Check if we have reached the workspace root
+			if (parentDir === dirname) {
+				resolve(undefined); // File not found in any parent directory
+			} else {
+				// Continue search in the parent directory
+				resolve(findDirectoryWithFile(parentDir, fileName));
 			}
-			if (stderr) {
-				return vscode.window.showErrorMessage(`Command ${command} error output: ${stderr}`);
-			}
-			vscode.window.showInformationMessage("Saving Succeeded.")
+		}
 		});
+	});
+	}
+	
+function runCommand(directory: string) {
+	const command = vscode.workspace.getConfiguration(extensionName).command;
+
+	animatedstatusBarItem?.show();
+	outputChannel.show(true);
+	
+	const child = child_process.spawn(command, [], { cwd : directory, shell: true });
+
+	const timeout = setTimeout(() => {
+		child.kill();
+	}, vscode.workspace.getConfiguration(extensionName).commandTimeout * 1000);
+
+	let errorMsg : string = "";
+
+	// Handle process exit
+	child.on('exit', (code) => {
+		clearTimeout(timeout);
+
+		// Always hide status bar
+		animatedstatusBarItem?.hide();
+	});
+
+	child.stdout.on('data', (data) => {
+		outputChannel.append(data.toString());
+	});
+
+    child.stderr.on('data', (data) => {
+		outputChannel.append(data.toString());
+		vscode.window.showErrorMessage(`${data}`);
+    });
+
+    child.stderr.on('end', () => {        
+		child.kill();
+    });
 }

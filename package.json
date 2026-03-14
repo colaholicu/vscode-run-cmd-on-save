@@ -2,7 +2,8 @@
   "name": "run-cmd-on-save",
   "displayName": "Run on Save",
   "description": "Runs a command when a .ts or .scss file is saved.",
-  "version": "0.0.3",
+  "publisher": "colaholicu",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.89.0"
   },
@@ -26,9 +27,18 @@
           "type": "string",
           "default": "",
           "description": "If file is specified it will run the command in the folder where this file exists inside the saved file's tree."
+        },
+        "run-cmd-on-save.commandTimeout": {
+          "type": "integer",
+          "default": 5,
+          "description": "Default timeout (in seconds) for the command before the process gets terminated."
         }
       }
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/colaholicu/vscode-run-cmd-on-save.git"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -48,10 +58,10 @@
     "@vscode/test-electron": "^2.1.5",
     "eslint": "^8.20.0",
     "glob": "^8.0.3",
-    "mocha": "^10.0.0",
+    "mocha": "^11.7.5",
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "vsce": "^1.97.0"
+    "vsce": "^2.15.0"
   }
 }
